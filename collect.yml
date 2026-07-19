@@ -1,0 +1,37 @@
+name: Collect DSE block trades
+
+on:
+  schedule:
+    # 09:30 UTC = 15:30 Asia/Dhaka (after the 2:20 PM DSE close), every day.
+    # The collector self-skips weekends/holidays (page date already stored).
+    - cron: "30 9 * * *"
+  workflow_dispatch: {}   # allow manual runs from the Actions tab
+
+permissions:
+  contents: write          # let the job commit the updated data file
+
+concurrency:
+  group: collect
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: python collector.py
+      - name: Commit updated data (if changed)
+        run: |
+          git config user.name "dse-collector"
+          git config user.email "actions@users.noreply.github.com"
+          git add blocktrades.json
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "data: block trades update ($(date -u +%F))"
+            git push
+          fi
