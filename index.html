@@ -36,8 +36,31 @@ tbody tr:nth-child(even){background:var(--light)}
 .empty{padding:26px;text-align:center;color:var(--muted)}
 .tablewrap{max-height:440px;overflow:auto;border:1px solid var(--line);border-radius:10px}
 footer{font-size:12px;color:var(--muted);margin-top:18px;line-height:1.6}
+/* password gate */
+#gate{position:fixed;inset:0;background:linear-gradient(160deg,#1F4E78,#12324e);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px}
+#gate .card{background:#fff;border-radius:14px;padding:30px 28px;max-width:360px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.25);text-align:center}
+#gate h2{margin:0 0 6px;color:var(--navy);font-size:20px}
+#gate p{margin:0 0 18px;color:var(--muted);font-size:13px}
+#gate input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:8px;font-size:15px;margin-bottom:12px}
+#gate input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(46,117,182,.15)}
+#gate button{width:100%;background:var(--blue);color:#fff;border:0;padding:11px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer}
+#gate button:hover{background:#255e93}
+#gate .err{color:#c0392b;font-size:13px;min-height:18px;margin-top:10px}
+#app{display:none}
 </style></head>
 <body>
+
+<div id="gate">
+  <div class="card">
+    <h2>DSE Block Trade Explorer</h2>
+    <p>This tool is private. Please enter the access password.</p>
+    <input type="password" id="pw" placeholder="Password" autocomplete="off" autofocus>
+    <button onclick="checkPw()">Unlock</button>
+    <div class="err" id="pwerr"></div>
+  </div>
+</div>
+
+<div id="app">
 <header><div class="wrap"><div><h1>DSE Block Trade Explorer</h1>
 <div class="sub">Block transactions on the Dhaka Stock Exchange, by ticker and date range</div></div>
 <div class="sub" id="through">Loading…</div></div></header>
@@ -71,16 +94,56 @@ footer{font-size:12px;color:var(--muted);margin-top:18px;line-height:1.6}
   VWAP = total value ÷ total quantity. Qty per Trade = total quantity ÷ number of trades. History accumulates from launch.
 </footer>
 </div>
+</div>
 
 <script>
-let DB={updated:null, rows:[]};
+// ---- Simple password gate (client-side) ----
+const PW_HASH="9dd7f9c5f8ec7d46539bd431e09f4af33cd8aeea3f0dbffd7472a5de9e4d1823";
+// self-contained SHA-256 (works over http or https)
+function sha256(ascii){
+  function rr(v,a){return (v>>>a)|(v<<(32-a));}
+  var mp=Math.pow, mw=mp(2,32), res='', words=[], bitLen=ascii.length*8;
+  var hash=sha256.h=sha256.h||[], k=sha256.k=sha256.k||[], pc=k.length, comp={};
+  for(var cand=2; pc<64; cand++){ if(!comp[cand]){ for(var i=0;i<313;i+=cand){comp[i]=cand;} hash[pc]=(mp(cand,.5)*mw)|0; k[pc++]=(mp(cand,1/3)*mw)|0; } }
+  ascii+='\x80'; while(ascii.length%64-56) ascii+='\x00';
+  for(var i=0;i<ascii.length;i++){ var j=ascii.charCodeAt(i); if(j>>8) return; words[i>>2]|=j<<((3-i)%4)*8; }
+  words[words.length]=((bitLen/mw)|0); words[words.length]=(bitLen);
+  for(var j=0;j<words.length;){
+    var w=words.slice(j,j+=16), oldHash=hash; hash=hash.slice(0,8);
+    for(var i=0;i<64;i++){
+      var w15=w[i-15], w2=w[i-2], a=hash[0], e=hash[4];
+      var t1=hash[7]+(rr(e,6)^rr(e,11)^rr(e,25))+((e&hash[5])^((~e)&hash[6]))+k[i]
+        +(w[i]=i<16?w[i]:(w[i-16]+(rr(w15,7)^rr(w15,18)^(w15>>>3))+w[i-7]+(rr(w2,17)^rr(w2,19)^(w2>>>10)))|0);
+      var t2=(rr(a,2)^rr(a,13)^rr(a,22))+((a&hash[1])^(a&hash[2])^(hash[1]&hash[2]));
+      hash=[(t1+t2)|0].concat(hash); hash[4]=(hash[4]+t1)|0;
+    }
+    for(var i=0;i<8;i++){ hash[i]=(hash[i]+oldHash[i])|0; }
+  }
+  for(var i=0;i<8;i++){ for(var j=3;j+1;j--){ var b=(hash[i]>>(j*8))&255; res+=((b<16)?0:'')+b.toString(16); } }
+  return res;
+}
+function checkPw(){
+  const v=document.getElementById('pw').value;
+  if(sha256(v)===PW_HASH){ try{sessionStorage.setItem('bt_auth','1');}catch(e){}; unlock(); }
+  else { document.getElementById('pwerr').textContent='Incorrect password. Please try again.'; }
+}
+function unlock(){
+  document.getElementById('gate').style.display='none';
+  document.getElementById('app').style.display='block';
+  startApp();
+}
+document.getElementById('pw').addEventListener('keydown',e=>{ if(e.key==='Enter') checkPw(); });
+
+// ---- App ----
+let DB={updated:null, rows:[]}, started=false;
 const fmt=(n,d)=>n==null?"—":Number(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
-
-fetch('./blocktrades.json?_='+Date.now())
-  .then(r=>{if(!r.ok)throw new Error(r.status);return r.json();})
-  .then(d=>{DB=d; init();})
-  .catch(e=>{document.getElementById('ctx').innerHTML="<b>Could not load data.</b> Please try again shortly.";});
-
+function startApp(){
+  if(started) return; started=true;
+  fetch('./blocktrades.json?_='+Date.now())
+    .then(r=>{if(!r.ok)throw new Error(r.status);return r.json();})
+    .then(d=>{DB=d; init();})
+    .catch(e=>{document.getElementById('ctx').innerHTML="<b>Could not load data.</b> Please try again shortly.";});
+}
 function init(){
   const tickers=[...new Set(DB.rows.map(r=>r.t))].sort();
   const dl=document.getElementById('tk');
@@ -93,7 +156,6 @@ function init(){
   document.getElementById('through').textContent="Data through "+(DB.updated||max);
   run();
 }
-
 function run(){
   const from=document.getElementById('from').value, to=document.getElementById('to').value;
   const tk=document.getElementById('ticker').value.trim().toUpperCase();
@@ -115,5 +177,8 @@ function run(){
   tb.innerHTML=rows.map(r=>`<tr><td>${r.d}</td><td>${fmt(r.mx,2)}</td><td>${fmt(r.mn,2)}</td>`+
     `<td>${fmt(r.tr,0)}</td><td>${fmt(r.q/1e6,3)}</td><td>${fmt(r.v,3)}</td><td>${fmt(r.v*1e6/r.q,2)}</td></tr>`).join("");
 }
+
+// if already unlocked this browser session, skip the gate
+if(sessionStorage.getItem('bt_auth')==='1'){ unlock(); }
 </script>
 </body></html>
