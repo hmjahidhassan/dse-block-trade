@@ -207,13 +207,13 @@ function run(){
 function showToday(){
   const dates=DB.rows.map(r=>r.d).sort();
   const day=DB.updated || dates[dates.length-1];
-  const rows=DB.rows.filter(r=>r.d===day).sort((a,b)=>b.v-a.v);  // biggest by value first
+  const rows=DB.rows.filter(r=>r.d===day).sort((a,b)=>a.t.localeCompare(b.t));  // A–Z by ticker
   const ctx=document.getElementById('ctx'), tb=document.getElementById('tbody');
   document.getElementById('kpipanel').style.display='none';   // no summary cards in Today view
   document.getElementById('col0').textContent='Ticker';
   document.getElementById('tblsec').textContent='Block Trades by Ticker (latest day)';
   if(!rows.length){ ctx.innerHTML="No block trades recorded yet."; tb.innerHTML=`<tr><td colspan="7" class="empty">No data.</td></tr>`; return; }
-  ctx.innerHTML=`Today's block trades — <b>${day}</b> — <b>${rows.length}</b> ticker(s), sorted by value.`;
+  ctx.innerHTML=`Today's block trades — <b>${day}</b> — <b>${rows.length}</b> ticker(s), sorted A–Z.`;
   tb.innerHTML=rows.map(r=>`<tr><td>${r.t}</td><td>${fmt(r.mx,2)}</td><td>${fmt(r.mn,2)}</td>`+
     `<td>${fmt(r.tr,0)}</td><td>${fmt(r.q,0)}</td><td>${fmt(r.v,3)}</td><td>${fmt(r.v*1e6/r.q,2)}</td></tr>`).join("");
 }
