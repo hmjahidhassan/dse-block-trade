@@ -172,31 +172,55 @@ function init(){
 ['from','to'].forEach(id=>{const el=document.getElementById(id); if(el) el.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();run();}});});
 document.getElementById('type').addEventListener('change',run);
 
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function fmtDay(d){ const p=d.split('-'); return p[2]+'-'+MON[+p[1]-1]+'-'+p[0].slice(2); }
+function smoothPath(pts){
+  if(!pts.length) return '';
+  if(pts.length<3) return 'M'+pts.map(p=>p.x.toFixed(1)+','+p.y.toFixed(1)).join(' L');
+  let d=`M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`;
+  for(let i=0;i<pts.length-1;i++){
+    const p0=pts[i-1]||pts[i], p1=pts[i], p2=pts[i+1], p3=pts[i+2]||p2;
+    const c1x=p1.x+(p2.x-p0.x)/6, c1y=p1.y+(p2.y-p0.y)/6;
+    const c2x=p2.x-(p3.x-p1.x)/6, c2y=p2.y-(p3.y-p1.y)/6;
+    d+=` C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`;
+  }
+  return d;
+}
+function niceBounds(lo,hi,count){
+  let range=hi-lo; if(range<=0) range=Math.abs(hi)||1;
+  const raw=range/count, mag=Math.pow(10,Math.floor(Math.log10(raw))), norm=raw/mag;
+  let step=(norm<1.5?1:norm<3?2:norm<7?5:10)*mag;
+  const nlo=Math.floor(lo/step)*step, nhi=Math.ceil(hi/step)*step, ticks=[];
+  for(let v=nlo; v<=nhi+step/2; v+=step) ticks.push(+v.toFixed(10));
+  return {lo:nlo,hi:nhi,ticks};
+}
 function chart(rows){
-  const W=920,H=320,mL=58,mR=16,mT=26,mB=44, pw=W-mL-mR, ph=H-mT-mB;
+  const W=900,H=440,mL=72,mR=24,mT=24,mB=86, pw=W-mL-mR, ph=H-mT-mB;
   if(!rows.length) return '<div class="empty">No data in this range.</div>';
   const nets=rows.map(r=>r.b-r.s), n=rows.length;
   let lo=Math.min(0,...nets), hi=Math.max(0,...nets);
   if(hi-lo<0.02){ lo-=1; hi+=1; }
-  const pad=(hi-lo)*0.15; lo-=pad; hi+=pad;
+  const padv=(hi-lo)*0.18; lo-=padv; hi+=padv;
+  const nb=niceBounds(lo,hi,6); lo=nb.lo; hi=nb.hi;
   const x=i=> mL+(n===1? pw/2 : pw*i/(n-1));
   const y=v=> mT+ph*(1-(v-lo)/(hi-lo));
   let grid='';
-  for(let t=0;t<=4;t++){ const v=lo+(hi-lo)*t/4, yy=y(v);
-    grid+=`<line x1="${mL}" y1="${yy.toFixed(1)}" x2="${W-mR}" y2="${yy.toFixed(1)}" stroke="#e6edf5"/>`+
-          `<text x="${mL-8}" y="${(yy+4).toFixed(1)}" text-anchor="end" font-size="11" fill="#5b6b7f">${v.toFixed(2)}%</text>`; }
-  let zero='';
-  if(lo<0 && hi>0){ const yz=y(0); zero=`<line x1="${mL}" y1="${yz.toFixed(1)}" x2="${W-mR}" y2="${yz.toFixed(1)}" stroke="#9aa7b6" stroke-dasharray="4 3"/>`; }
-  const step=Math.max(1,Math.ceil(n/8)); let xl='';
-  rows.forEach((r,i)=>{ if(i%step===0||i===n-1) xl+=`<text x="${x(i).toFixed(1)}" y="${H-mB+18}" text-anchor="middle" font-size="10" fill="#5b6b7f">${r.d.slice(5)}</text>`; });
-  const line=n>1?`<polyline points="${nets.map((v,i)=>x(i).toFixed(1)+','+y(v).toFixed(1)).join(' ')}" fill="none" stroke="#1F4E78" stroke-width="2.5"/>`:'';
-  const dots=nets.map((v,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="3.6" fill="${v>=0?'#1a7f37':'#c0392b'}"/>`).join('');
-  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" role="img">${grid}${zero}
+  nb.ticks.forEach(v=>{ const yy=y(v);
+    grid+=`<line x1="${mL}" y1="${yy.toFixed(1)}" x2="${W-mR}" y2="${yy.toFixed(1)}" stroke="#eaf0f6"/>`+
+          `<text x="${mL-10}" y="${(yy+4).toFixed(1)}" text-anchor="end" font-size="12" fill="#5b6b7f">${v.toFixed(2)}%</text>`; });
+  const yz=y(0);
+  const zero=`<line x1="${mL}" y1="${yz.toFixed(1)}" x2="${W-mR}" y2="${yz.toFixed(1)}" stroke="#111827" stroke-width="1.3"/>`;
+  const step=Math.max(1,Math.ceil(n/24)); let xl='';
+  rows.forEach((r,i)=>{ if(i%step===0||i===n-1){ const xx=x(i).toFixed(1), yy=(H-mB+16);
+    xl+=`<text x="${xx}" y="${yy}" transform="rotate(-60 ${xx} ${yy})" text-anchor="end" font-size="11" fill="#5b6b7f">${fmtDay(r.d)}</text>`; } });
+  const pts=nets.map((v,i)=>({x:x(i),y:y(v)}));
+  const line=`<path d="${smoothPath(pts)}" fill="none" stroke="#1F4E78" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>`;
+  const single=n===1?`<circle cx="${x(0).toFixed(1)}" cy="${y(nets[0]).toFixed(1)}" r="3.6" fill="#1F4E78"/>`:'';
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" role="img" aria-label="Net position trend">
+    ${grid}${zero}
     <line x1="${mL}" y1="${mT}" x2="${mL}" y2="${H-mB}" stroke="#c9d6e5"/>
     <line x1="${mL}" y1="${H-mB}" x2="${W-mR}" y2="${H-mB}" stroke="#c9d6e5"/>
-    ${xl}${line}${dots}
-    <g font-size="12"><rect x="${mL}" y="4" width="12" height="12" fill="#1F4E78"/><text x="${mL+18}" y="14" fill="#1a2433">Net % (Buy − Sell) — green above 0 = net buyer, red below = net seller</text></g>
-  </svg>`;
+    ${xl}${line}${single}</svg>`;
 }
 function run(){
   const from=document.getElementById('from').value, to=document.getElementById('to').value;
