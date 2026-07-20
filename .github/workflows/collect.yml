@@ -24,12 +24,11 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements.txt
       - run: python collector.py
-      - run: python snippet_collector.py
       - name: Commit updated data (if changed)
         run: |
           git config user.name "dse-collector"
           git config user.email "actions@users.noreply.github.com"
-          git add blocktrades.json client_stats.json
+          git add blocktrades.json
           if git diff --staged --quiet; then
             echo "No changes to commit."
           else
