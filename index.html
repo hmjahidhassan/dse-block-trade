@@ -97,7 +97,7 @@ footer{font-size:12px;color:var(--muted);margin-top:18px;line-height:1.6}
 <div class="panel">
   <h2 class="sec" id="tblsec">Day-by-Day Block Trades</h2>
   <div class="tablewrap"><table><thead><tr>
-    <th id="col0">Date</th><th>Max Price</th><th>Min Price</th><th>Trades</th><th>Quantity (mn)</th><th>Value (BDT mn)</th><th>VWAP (BDT)</th>
+    <th id="col0">Date</th><th>Max Price</th><th>Min Price</th><th>Trades</th><th>Quantity</th><th>Value (BDT mn)</th><th>VWAP (BDT)</th>
   </tr></thead><tbody id="tbody"></tbody></table></div>
 </div>
 
@@ -195,11 +195,11 @@ function run(){
   const card=(l,v)=>`<div class="kpi"><div class="lab">${l}</div><div class="val">${v}</div></div>`;
   kb.innerHTML=[
     card("Max Price (BDT)",fmt(mx,2)),card("Min Price (BDT)",fmt(mn,2)),
-    card("No. of Trades",fmt(sTr,0)),card("Quantity (mn)",fmt(sQ/1e6,3)),
+    card("No. of Trades",fmt(sTr,0)),card("Quantity",fmt(sQ,0)),
     card("Qty / Trade",fmt(qpt,0)),card("Value (BDT mn)",fmt(sV,3)),card("VWAP (BDT)",fmt(vwap,2))
   ].join("");
   tb.innerHTML=rows.map(r=>`<tr><td>${r.d}</td><td>${fmt(r.mx,2)}</td><td>${fmt(r.mn,2)}</td>`+
-    `<td>${fmt(r.tr,0)}</td><td>${fmt(r.q/1e6,3)}</td><td>${fmt(r.v,3)}</td><td>${fmt(r.v*1e6/r.q,2)}</td></tr>`).join("");
+    `<td>${fmt(r.tr,0)}</td><td>${fmt(r.q,0)}</td><td>${fmt(r.v,3)}</td><td>${fmt(r.v*1e6/r.q,2)}</td></tr>`).join("");
 }
 
 // "Today" view — every ticker's block trade on the latest available trading day
@@ -219,11 +219,11 @@ function showToday(){
   const card=(l,v)=>`<div class="kpi"><div class="lab">${l}</div><div class="val">${v}</div></div>`;
   kb.innerHTML=[
     card("Max Price (BDT)",fmt(mx,2)),card("Min Price (BDT)",fmt(mn,2)),
-    card("No. of Trades",fmt(sTr,0)),card("Quantity (mn)",fmt(sQ/1e6,3)),
+    card("No. of Trades",fmt(sTr,0)),card("Quantity",fmt(sQ,0)),
     card("Qty / Trade",fmt(qpt,0)),card("Value (BDT mn)",fmt(sV,3)),card("VWAP (BDT)",fmt(vwap,2))
   ].join("");
   tb.innerHTML=rows.map(r=>`<tr><td>${r.t}</td><td>${fmt(r.mx,2)}</td><td>${fmt(r.mn,2)}</td>`+
-    `<td>${fmt(r.tr,0)}</td><td>${fmt(r.q/1e6,3)}</td><td>${fmt(r.v,3)}</td><td>${fmt(r.v*1e6/r.q,2)}</td></tr>`).join("");
+    `<td>${fmt(r.tr,0)}</td><td>${fmt(r.q,0)}</td><td>${fmt(r.v,3)}</td><td>${fmt(r.v*1e6/r.q,2)}</td></tr>`).join("");
 }
 
 // pressing Enter in any filter field runs the search
