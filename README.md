@@ -22,7 +22,7 @@ history is inherently backed up in the commit log.
 | `index.html` | The website (filters, KPI summary, day-by-day table). Pure HTML/JS, no build step. |
 | `blocktrades.json` | Accumulating dataset (`{updated, rows:[{d,t,mx,mn,tr,q,v}]}`). |
 | `collector.py` | Fetches DSE Market Statistics, parses the block table, appends new days (date-idempotent). |
-| `.github/workflows/collect.yml` | Runs the collector daily at 15:30 Asia/Dhaka and commits changes. |
+| `.github/workflows/collect.yml` | Runs the collector daily at 17:00 Asia/Dhaka (5 PM) and commits changes. |
 | `requirements.txt` | Python dependency (`requests`). |
 
 ## One-time deploy (checklist)
@@ -49,7 +49,7 @@ python collector.py        # appends today's block trades to blocktrades.json if
 
 - **Schedule:** the workflow runs daily; the collector skips days already stored
   (weekends/holidays show the previous session, so nothing is duplicated).
-- **Timezone:** GitHub cron is UTC. `30 9 * * *` = 15:30 Asia/Dhaka. Adjust in
+- **Timezone:** GitHub cron is UTC. `0 11 * * *` = 17:00 Asia/Dhaka (5 PM). Adjust in
   `collect.yml` if you want a different time.
 - **History** builds forward from launch — DSE publishes only the latest day, so
   earlier block-trade detail can't be back-filled.
