@@ -94,7 +94,7 @@ footer{font-size:12px;color:var(--muted);margin-top:18px;line-height:1.6}
 <div class="ctx" id="ctx"></div>
 
 <div class="panel">
-  <h2 class="sec">Buy % / Sell % Trend</h2>
+  <h2 class="sec">Net Position Trend (Buy − Sell)</h2>
   <div id="chart"></div>
 </div>
 
@@ -173,34 +173,29 @@ function init(){
 document.getElementById('type').addEventListener('change',run);
 
 function chart(rows){
-  const W=920,H=320,mL=54,mR=16,mT=26,mB=44, pw=W-mL-mR, ph=H-mT-mB;
+  const W=920,H=320,mL=58,mR=16,mT=26,mB=44, pw=W-mL-mR, ph=H-mT-mB;
   if(!rows.length) return '<div class="empty">No data in this range.</div>';
-  const buys=rows.map(r=>r.b), sells=rows.map(r=>r.s), n=rows.length;
-  let lo=Math.min(...buys,...sells), hi=Math.max(...buys,...sells);
-  if(hi-lo<0.01){ lo=Math.max(0,lo-1); hi=hi+1; }
-  const pad=(hi-lo)*0.15; lo=Math.max(0,lo-pad); hi=Math.min(100,hi+pad);
+  const nets=rows.map(r=>r.b-r.s), n=rows.length;
+  let lo=Math.min(0,...nets), hi=Math.max(0,...nets);
+  if(hi-lo<0.02){ lo-=1; hi+=1; }
+  const pad=(hi-lo)*0.15; lo-=pad; hi+=pad;
   const x=i=> mL+(n===1? pw/2 : pw*i/(n-1));
   const y=v=> mT+ph*(1-(v-lo)/(hi-lo));
   let grid='';
   for(let t=0;t<=4;t++){ const v=lo+(hi-lo)*t/4, yy=y(v);
     grid+=`<line x1="${mL}" y1="${yy.toFixed(1)}" x2="${W-mR}" y2="${yy.toFixed(1)}" stroke="#e6edf5"/>`+
           `<text x="${mL-8}" y="${(yy+4).toFixed(1)}" text-anchor="end" font-size="11" fill="#5b6b7f">${v.toFixed(2)}%</text>`; }
+  let zero='';
+  if(lo<0 && hi>0){ const yz=y(0); zero=`<line x1="${mL}" y1="${yz.toFixed(1)}" x2="${W-mR}" y2="${yz.toFixed(1)}" stroke="#9aa7b6" stroke-dasharray="4 3"/>`; }
   const step=Math.max(1,Math.ceil(n/8)); let xl='';
   rows.forEach((r,i)=>{ if(i%step===0||i===n-1) xl+=`<text x="${x(i).toFixed(1)}" y="${H-mB+18}" text-anchor="middle" font-size="10" fill="#5b6b7f">${r.d.slice(5)}</text>`; });
-  const series=(vals,color)=>{
-    const line=n>1?`<polyline points="${vals.map((v,i)=>x(i).toFixed(1)+','+y(v).toFixed(1)).join(' ')}" fill="none" stroke="${color}" stroke-width="2.5"/>`:'';
-    const dots=vals.map((v,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="3.4" fill="${color}"/>`).join('');
-    return line+dots;
-  };
-  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" role="img">
-    ${grid}
+  const line=n>1?`<polyline points="${nets.map((v,i)=>x(i).toFixed(1)+','+y(v).toFixed(1)).join(' ')}" fill="none" stroke="#1F4E78" stroke-width="2.5"/>`:'';
+  const dots=nets.map((v,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="3.6" fill="${v>=0?'#1a7f37':'#c0392b'}"/>`).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" role="img">${grid}${zero}
     <line x1="${mL}" y1="${mT}" x2="${mL}" y2="${H-mB}" stroke="#c9d6e5"/>
     <line x1="${mL}" y1="${H-mB}" x2="${W-mR}" y2="${H-mB}" stroke="#c9d6e5"/>
-    ${xl}${series(buys,'#2E75B6')}${series(sells,'#E8833A')}
-    <g font-size="12">
-      <rect x="${mL}" y="4" width="12" height="12" fill="#2E75B6"/><text x="${mL+18}" y="14" fill="#1a2433">Buy %</text>
-      <rect x="${mL+80}" y="4" width="12" height="12" fill="#E8833A"/><text x="${mL+98}" y="14" fill="#1a2433">Sell %</text>
-    </g>
+    ${xl}${line}${dots}
+    <g font-size="12"><rect x="${mL}" y="4" width="12" height="12" fill="#1F4E78"/><text x="${mL+18}" y="14" fill="#1a2433">Net % (Buy − Sell) — green above 0 = net buyer, red below = net seller</text></g>
   </svg>`;
 }
 function run(){
