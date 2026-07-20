@@ -16,7 +16,7 @@ header a:hover{color:#fff;text-decoration:underline}
 .panel{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;margin:16px 0;box-shadow:0 1px 2px rgba(20,40,80,.04)}
 h2.sec{font-size:14px;color:var(--navy);margin:6px 2px 10px;text-transform:uppercase;letter-spacing:.4px}
 .tablewrap{max-height:560px;overflow:auto;border:1px solid var(--line);border-radius:10px}
-table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:760px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:1080px}
 th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
 th{background:var(--blue);color:#fff;font-size:12px;position:sticky;top:0}
 thead tr:first-child th{border-right:1px solid rgba(255,255,255,.25)}
@@ -25,6 +25,9 @@ tbody td:first-child{background:#fff;font-weight:700;color:var(--navy)}
 tbody tr:nth-child(even) td{background:var(--light)}
 tbody tr:nth-child(even) td:first-child{background:var(--light)}
 td.b{border-left:1px solid var(--line)}
+td.net{font-weight:700}
+td.net.pos{color:#1a7f37}
+td.net.neg{color:#c0392b}
 .empty{padding:26px;text-align:center;color:var(--muted)}
 footer{font-size:12px;color:var(--muted);margin-top:18px;line-height:1.6}
 /* password gate */
@@ -70,10 +73,10 @@ footer{font-size:12px;color:var(--muted);margin-top:18px;line-height:1.6}
     <thead>
       <tr>
         <th rowspan="2">Date</th>
-        <th colspan="2">Retail</th><th colspan="2">Institution</th><th colspan="2">Dealer</th><th colspan="2">Foreign</th><th colspan="2">Others</th>
+        <th colspan="3">Retail</th><th colspan="3">Institution</th><th colspan="3">Dealer</th><th colspan="3">Foreign</th><th colspan="3">Others</th>
       </tr>
       <tr>
-        <th>Buy %</th><th>Sell %</th><th>Buy %</th><th>Sell %</th><th>Buy %</th><th>Sell %</th><th>Buy %</th><th>Sell %</th><th>Buy %</th><th>Sell %</th>
+        <th>Buy %</th><th>Sell %</th><th>Net</th><th>Buy %</th><th>Sell %</th><th>Net</th><th>Buy %</th><th>Sell %</th><th>Net</th><th>Buy %</th><th>Sell %</th><th>Net</th><th>Buy %</th><th>Sell %</th><th>Net</th>
       </tr>
     </thead>
     <tbody id="tbody"></tbody>
@@ -130,24 +133,31 @@ function togglePw(){
 
 let started=false;
 const fmt=n=>n==null?"—":Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+"%";
+function netCell(b,s){
+  const n=b-s;
+  const v=Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+"%";
+  if(n>0.0001)  return `<td class="net pos">${v}</td>`;
+  if(n<-0.0001) return `<td class="net neg">(${v})</td>`;
+  return `<td class="net">${v}</td>`;
+}
 function startApp(){
   if(started) return; started=true;
   fetch('./client_stats.json?_='+Date.now())
     .then(r=>{if(!r.ok)throw new Error(r.status);return r.json();})
     .then(d=>render(d))
-    .catch(e=>{document.getElementById('tbody').innerHTML='<tr><td colspan="11" class="empty">Could not load data. Please try again shortly.</td></tr>';});
+    .catch(e=>{document.getElementById('tbody').innerHTML='<tr><td colspan="16" class="empty">Could not load data. Please try again shortly.</td></tr>';});
 }
 function render(DB){
   document.getElementById('through').textContent="Data through "+(DB.updated||"");
   const rows=[...DB.rows].sort((a,b)=>a.d<b.d?1:-1); // newest first
   const tb=document.getElementById('tbody');
-  if(!rows.length){ tb.innerHTML='<tr><td colspan="11" class="empty">No data yet.</td></tr>'; return; }
+  if(!rows.length){ tb.innerHTML='<tr><td colspan="16" class="empty">No data yet.</td></tr>'; return; }
   tb.innerHTML=rows.map(r=>`<tr><td>${r.d}</td>`+
-    `<td class="b">${fmt(r.retail_b)}</td><td>${fmt(r.retail_s)}</td>`+
-    `<td class="b">${fmt(r.inst_b)}</td><td>${fmt(r.inst_s)}</td>`+
-    `<td class="b">${fmt(r.dealer_b)}</td><td>${fmt(r.dealer_s)}</td>`+
-    `<td class="b">${fmt(r.foreign_b)}</td><td>${fmt(r.foreign_s)}</td>`+
-    `<td class="b">${fmt(r.others_b)}</td><td>${fmt(r.others_s)}</td></tr>`).join("");
+    `<td class="b">${fmt(r.retail_b)}</td><td>${fmt(r.retail_s)}</td>${netCell(r.retail_b,r.retail_s)}`+
+    `<td class="b">${fmt(r.inst_b)}</td><td>${fmt(r.inst_s)}</td>${netCell(r.inst_b,r.inst_s)}`+
+    `<td class="b">${fmt(r.dealer_b)}</td><td>${fmt(r.dealer_s)}</td>${netCell(r.dealer_b,r.dealer_s)}`+
+    `<td class="b">${fmt(r.foreign_b)}</td><td>${fmt(r.foreign_s)}</td>${netCell(r.foreign_b,r.foreign_s)}`+
+    `<td class="b">${fmt(r.others_b)}</td><td>${fmt(r.others_s)}</td>${netCell(r.others_b,r.others_s)}</tr>`).join("");
 }
 if(sessionStorage.getItem('bt_auth')==='1'){ unlock(); }
 </script>
