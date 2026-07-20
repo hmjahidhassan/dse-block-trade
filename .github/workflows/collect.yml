@@ -2,9 +2,9 @@ name: Collect DSE block trades
 
 on:
   schedule:
-    # 09:30 UTC = 15:30 Asia/Dhaka (after the 2:20 PM DSE close), every day.
+    # 11:00 UTC = 17:00 Asia/Dhaka (5:00 PM, after the 2:20 PM DSE close), every day.
     # The collector self-skips weekends/holidays (page date already stored).
-    - cron: "30 9 * * *"
+    - cron: "0 11 * * *"
   workflow_dispatch: {}   # allow manual runs from the Actions tab
 
 permissions:
