@@ -46,6 +46,10 @@ footer{font-size:12px;color:var(--muted);margin-top:18px;line-height:1.6}
 #gate button{width:100%;background:var(--blue);color:#fff;border:0;padding:11px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer}
 #gate button:hover{background:#255e93}
 #gate .err{color:#c0392b;font-size:13px;min-height:18px;margin-top:10px}
+#gate .pwwrap{position:relative;margin-bottom:12px}
+#gate .pwwrap input{margin-bottom:0;padding-right:44px}
+#gate .pwtoggle{position:absolute;right:4px;top:4px;bottom:4px;width:36px;background:none;border:0;padding:0;margin:0;cursor:pointer;color:#8792a3;display:flex;align-items:center;justify-content:center;border-radius:6px}
+#gate .pwtoggle:hover{color:var(--navy);background:#eef2f7}
 #app{display:none}
 </style></head>
 <body>
@@ -54,7 +58,10 @@ footer{font-size:12px;color:var(--muted);margin-top:18px;line-height:1.6}
   <div class="card">
     <h2>DSE Block Trade Explorer</h2>
     <p>This tool is private. Please enter the access password.</p>
-    <input type="password" id="pw" placeholder="Password" autocomplete="off" autofocus>
+    <div class="pwwrap">
+      <input type="password" id="pw" placeholder="Password" autocomplete="off" autofocus>
+      <button type="button" id="pwtoggle" class="pwtoggle" onclick="togglePw()" aria-label="Show password"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
+    </div>
     <button onclick="checkPw()">Unlock</button>
     <div class="err" id="pwerr"></div>
   </div>
@@ -133,6 +140,16 @@ function unlock(){
   startApp();
 }
 document.getElementById('pw').addEventListener('keydown',e=>{ if(e.key==='Enter') checkPw(); });
+const EYE='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>';
+const EYE_OFF='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+function togglePw(){
+  const inp=document.getElementById('pw'), btn=document.getElementById('pwtoggle');
+  const reveal = inp.type==='password';
+  inp.type = reveal ? 'text' : 'password';
+  btn.innerHTML = reveal ? EYE_OFF : EYE;
+  btn.setAttribute('aria-label', reveal ? 'Hide password' : 'Show password');
+  inp.focus();
+}
 
 // ---- App ----
 let DB={updated:null, rows:[]}, started=false;
