@@ -94,6 +94,9 @@ footer{font-size:12px;color:var(--muted);margin-top:18px;line-height:1.6}
       <div class="presets">
         <button type="button" class="chip" onclick="preset(20)">Last 20 days</button>
         <button type="button" class="chip" onclick="preset(60)">Last 60 days</button>
+        <button type="button" class="chip" onclick="presetCal('mtd')" title="Month to date">MTD</button>
+        <button type="button" class="chip" onclick="presetCal('qtd')" title="Quarter to date (Jan/Apr/Jul/Oct)">QTD</button>
+        <button type="button" class="chip" onclick="presetCal('ytd')" title="Year to date">YTD</button>
         <button type="button" class="chip" onclick="preset(0)">All</button>
       </div>
     </div>
@@ -283,6 +286,19 @@ function preset(nDays){
   if(!dates.length) return;
   const to=dates[dates.length-1];
   const from=(nDays>0 && dates.length>nDays)? dates[dates.length-nDays] : dates[0];
+  document.getElementById('from').value=from;
+  document.getElementById('to').value=to;
+  run();
+}
+function presetCal(kind){
+  const dates=DB.rows.map(r=>r.d).sort();
+  if(!dates.length) return;
+  const to=dates[dates.length-1];
+  const [Y,M]=to.split('-').map(Number), p2=x=>String(x).padStart(2,'0');
+  let from;
+  if(kind==='mtd') from=`${Y}-${p2(M)}-01`;
+  else if(kind==='qtd') from=`${Y}-${p2(Math.floor((M-1)/3)*3+1)}-01`;
+  else from=`${Y}-01-01`;
   document.getElementById('from').value=from;
   document.getElementById('to').value=to;
   run();
