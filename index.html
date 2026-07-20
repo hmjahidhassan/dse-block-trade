@@ -178,6 +178,12 @@ function run(){
     `<td>${fmt(r.tr,0)}</td><td>${fmt(r.q/1e6,3)}</td><td>${fmt(r.v,3)}</td><td>${fmt(r.v*1e6/r.q,2)}</td></tr>`).join("");
 }
 
+// pressing Enter in any filter field runs the search
+['ticker','from','to'].forEach(id=>{
+  const el=document.getElementById(id);
+  if(el) el.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); run(); } });
+});
+
 // if already unlocked this browser session, skip the gate
 if(sessionStorage.getItem('bt_auth')==='1'){ unlock(); }
 </script>
