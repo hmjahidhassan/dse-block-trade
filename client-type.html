@@ -156,10 +156,27 @@ function togglePw(){
 let DB={updated:null,rows:[]}, started=false;
 function startApp(){
   if(started) return; started=true;
-  fetch('./client_stats.json?_='+Date.now())
-    .then(r=>{if(!r.ok)throw new Error(r.status);return r.json();})
-    .then(d=>{DB=d; init();})
-    .catch(e=>{document.getElementById('ctx').innerHTML="<b>Could not load data.</b> Please try again shortly.";});
+  const localUrl = './client_stats.json?_=' + Date.now();
+  const rawUrl = 'https://raw.githubusercontent.com/hmjahidhassan/dse-block-trade/main/client_stats.json?_=' + Date.now();
+  
+  Promise.allSettled([
+    fetch(localUrl).then(r => r.ok ? r.json() : null),
+    fetch(rawUrl).then(r => r.ok ? r.json() : null)
+  ]).then(results => {
+    const localData = results[0].status === 'fulfilled' ? results[0].value : null;
+    const rawData = results[1].status === 'fulfilled' ? results[1].value : null;
+    let chosen = null;
+    if(rawData && rawData.updated && (!localData || !localData.updated || rawData.updated >= localData.updated)){
+      chosen = rawData;
+    } else {
+      chosen = localData || rawData;
+    }
+    if(!chosen) throw new Error("No data loaded");
+    DB = chosen;
+    init();
+  }).catch(e => {
+    document.getElementById('ctx').innerHTML = "<b>Could not load data.</b> Please try again shortly.";
+  });
 }
 function init(){
   const dates=DB.rows.map(r=>r.d).sort();
