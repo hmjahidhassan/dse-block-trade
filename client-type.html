@@ -1,23 +1,223 @@
 <!DOCTYPE html>
 <html lang="en"><head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>DSE Client Type Stats — Moved</title>
-<meta http-equiv="refresh" content="0; url=https://client-type-trade.jahid.ca/">
-<link rel="canonical" href="https://client-type-trade.jahid.ca/">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DSE Client Type Stats</title>
 <style>
-body{font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#eef2f7;color:#1a2433;display:flex;min-height:100vh;margin:0;align-items:center;justify-content:center;text-align:center;padding:20px}
-.card{background:#fff;border:1px solid #dbe4ee;border-radius:12px;padding:32px 28px;max-width:440px;box-shadow:0 1px 2px rgba(20,40,80,.04)}
-h1{color:#1F4E78;font-size:20px;margin:0 0 8px}
-p{color:#5b6b7f;font-size:14px;margin:0 0 16px;line-height:1.5}
-a{color:#2E75B6;font-weight:700;text-decoration:none}
-a:hover{text-decoration:underline}
-</style>
-</head><body>
-<div class="card">
-<h1>Client Type Stats has moved</h1>
-<p>This tool now has its own home. If you're not redirected automatically, use the link below.</p>
-<p><a href="https://client-type-trade.jahid.ca/">Go to client-type-trade.jahid.ca &rarr;</a></p>
+:root{--navy:#1F4E78;--blue:#2E75B6;--orange:#E8833A;--light:#F2F7FC;--ink:#1a2433;--muted:#5b6b7f;--line:#dbe4ee;}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:#eef2f7}
+.wrap{max-width:1040px;margin:0 auto;padding:0 16px 48px}
+header{background:var(--navy);color:#fff;padding:22px 0}
+header .wrap{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+header h1{margin:0;font-size:22px;letter-spacing:.3px}
+header .sub{font-size:13px;color:#cfe0f2}
+header a{color:#cfe0f2;text-decoration:none;font-weight:700;font-size:13px}
+header a:hover{color:#fff;text-decoration:underline}
+.panel{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;margin:16px 0;box-shadow:0 1px 2px rgba(20,40,80,.04)}
+.filters{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:12px;font-weight:700;color:var(--muted)}
+.field input,.field select{padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:14px;min-width:160px;background:#fff}
+.field input:focus,.field select:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(46,117,182,.15)}
+button.go{background:var(--blue);color:#fff;border:0;padding:10px 22px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;height:40px}
+button.go:hover{background:#255e93}
+.ctx{font-size:13px;color:var(--muted);margin:2px 0 12px}
+.ctx b{color:var(--ink)}
+h2.sec{font-size:14px;color:var(--navy);margin:2px 2px 10px;text-transform:uppercase;letter-spacing:.4px}
+#chart{width:100%}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:420px}
+th,td{padding:9px 12px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{background:var(--blue);color:#fff;font-size:12px;position:sticky;top:0}
+th:first-child,td:first-child{text-align:left}
+tbody td:first-child{font-weight:700;color:var(--navy)}
+tbody tr:nth-child(even){background:var(--light)}
+td.net{font-weight:700}
+td.net.pos{color:#1a7f37}
+td.net.neg{color:#c0392b}
+.empty{padding:26px;text-align:center;color:var(--muted)}
+.tablewrap{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:10px}
+footer{font-size:12px;color:var(--muted);margin-top:18px;line-height:1.6}
+/* password gate */
+#gate{position:fixed;inset:0;background:linear-gradient(160deg,#1F4E78,#12324e);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px}
+#gate .card{background:#fff;border-radius:14px;padding:30px 28px;max-width:360px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.25);text-align:center}
+#gate h2{margin:0 0 6px;color:var(--navy);font-size:20px}
+#gate p{margin:0 0 18px;color:var(--muted);font-size:13px}
+#gate input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:8px;font-size:15px}
+#gate input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(46,117,182,.15)}
+#gate button{width:100%;background:var(--blue);color:#fff;border:0;padding:11px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer}
+#gate button:hover{background:#255e93}
+#gate .err{color:#c0392b;font-size:13px;min-height:18px;margin-top:10px}
+#gate .pwwrap{position:relative;margin-bottom:12px}
+#gate .pwwrap input{margin-bottom:0;padding-right:44px}
+#gate .pwtoggle{position:absolute;right:4px;top:4px;bottom:4px;width:36px;background:none;border:0;padding:0;margin:0;cursor:pointer;color:#8792a3;display:flex;align-items:center;justify-content:center;border-radius:6px}
+#gate .pwtoggle:hover{color:var(--navy);background:#eef2f7}
+#app{display:none}
+</style></head>
+<body>
+
+<div id="gate">
+  <div class="card">
+    <h2>DSE Client Type Stats</h2>
+    <p>This tool is private. Please enter the access password.</p>
+    <div class="pwwrap">
+      <input type="password" id="pw" placeholder="Password" autocomplete="off" autofocus>
+      <button type="button" id="pwtoggle" class="pwtoggle" onclick="togglePw()" aria-label="Show password"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
+    </div>
+    <button onclick="checkPw()">Unlock</button>
+    <div class="err" id="pwerr"></div>
+  </div>
 </div>
-<script>location.replace("https://client-type-trade.jahid.ca/");</script>
+
+<div id="app">
+<header><div class="wrap"><div><h1>DSE Client Type Stats</h1>
+<div class="sub">Buy % / Sell % trend by client type, from the DSE Daily Market Snippet</div></div>
+<div style="text-align:right"><a href="./index.html">&larr; Block Trades</a><br><span class="sub" id="through">Loading…</span></div></div></header>
+<div class="wrap">
+
+<div class="panel">
+  <div class="filters">
+    <div class="field"><label>From date</label><input type="date" id="from"></div>
+    <div class="field"><label>To date</label><input type="date" id="to"></div>
+    <div class="field"><label>Client type</label>
+      <select id="type">
+        <option value="retail">Retail</option>
+        <option value="inst">Institution</option>
+        <option value="dealer">Dealer</option>
+        <option value="foreign">Foreign</option>
+        <option value="others">Others</option>
+      </select>
+    </div>
+    <button class="go" onclick="run()">Search</button>
+  </div>
+</div>
+
+<div class="ctx" id="ctx"></div>
+
+<div class="panel">
+  <h2 class="sec">Buy % / Sell % Trend</h2>
+  <div id="chart"></div>
+</div>
+
+<div class="panel">
+  <h2 class="sec">Day-by-Day</h2>
+  <div class="tablewrap"><table><thead><tr>
+    <th>Date</th><th>Buy %</th><th>Sell %</th><th>Net</th>
+  </tr></thead><tbody id="tbody"></tbody></table></div>
+</div>
+
+<footer>
+  Source: Dhaka Stock Exchange — Daily Market Snippet (dsebd.org). Buy % / Sell % = the client type's share of total buy / sell value each day. Net = Buy % − Sell % (green = net buyer, red bracketed = net seller). Updated automatically each trading day.
+</footer>
+</div>
+</div>
+
+<script>
+const PW_HASH="9dd7f9c5f8ec7d46539bd431e09f4af33cd8aeea3f0dbffd7472a5de9e4d1823";
+function sha256(ascii){
+  function rr(v,a){return (v>>>a)|(v<<(32-a));}
+  var mp=Math.pow, mw=mp(2,32), res='', words=[], bitLen=ascii.length*8;
+  var hash=sha256.h=sha256.h||[], k=sha256.k=sha256.k||[], pc=k.length, comp={};
+  for(var cand=2; pc<64; cand++){ if(!comp[cand]){ for(var i=0;i<313;i+=cand){comp[i]=cand;} hash[pc]=(mp(cand,.5)*mw)|0; k[pc++]=(mp(cand,1/3)*mw)|0; } }
+  ascii+='\x80'; while(ascii.length%64-56) ascii+='\x00';
+  for(var i=0;i<ascii.length;i++){ var j=ascii.charCodeAt(i); if(j>>8) return; words[i>>2]|=j<<((3-i)%4)*8; }
+  words[words.length]=((bitLen/mw)|0); words[words.length]=(bitLen);
+  for(var j=0;j<words.length;){
+    var w=words.slice(j,j+=16), oldHash=hash; hash=hash.slice(0,8);
+    for(var i=0;i<64;i++){
+      var w15=w[i-15], w2=w[i-2], a=hash[0], e=hash[4];
+      var t1=hash[7]+(rr(e,6)^rr(e,11)^rr(e,25))+((e&hash[5])^((~e)&hash[6]))+k[i]
+        +(w[i]=i<16?w[i]:(w[i-16]+(rr(w15,7)^rr(w15,18)^(w15>>>3))+w[i-7]+(rr(w2,17)^rr(w2,19)^(w2>>>10)))|0);
+      var t2=(rr(a,2)^rr(a,13)^rr(a,22))+((a&hash[1])^(a&hash[2])^(hash[1]&hash[2]));
+      hash=[(t1+t2)|0].concat(hash); hash[4]=(hash[4]+t1)|0;
+    }
+    for(var i=0;i<8;i++){ hash[i]=(hash[i]+oldHash[i])|0; }
+  }
+  for(var i=0;i<8;i++){ for(var j=3;j+1;j--){ var b=(hash[i]>>(j*8))&255; res+=((b<16)?0:'')+b.toString(16); } }
+  return res;
+}
+function checkPw(){
+  const v=document.getElementById('pw').value;
+  if(sha256(v)===PW_HASH){ try{sessionStorage.setItem('bt_auth','1');}catch(e){}; unlock(); }
+  else { document.getElementById('pwerr').textContent='Incorrect password. Please try again.'; }
+}
+function unlock(){ document.getElementById('gate').style.display='none'; document.getElementById('app').style.display='block'; startApp(); }
+document.getElementById('pw').addEventListener('keydown',e=>{ if(e.key==='Enter') checkPw(); });
+const EYE='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>';
+const EYE_OFF='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+function togglePw(){
+  const inp=document.getElementById('pw'), btn=document.getElementById('pwtoggle');
+  const reveal = inp.type==='password';
+  inp.type = reveal ? 'text' : 'password';
+  btn.innerHTML = reveal ? EYE_OFF : EYE;
+  btn.setAttribute('aria-label', reveal ? 'Hide password' : 'Show password');
+  inp.focus();
+}
+
+let DB={updated:null,rows:[]}, started=false;
+function startApp(){
+  if(started) return; started=true;
+  fetch('./client_stats.json?_='+Date.now())
+    .then(r=>{if(!r.ok)throw new Error(r.status);return r.json();})
+    .then(d=>{DB=d; init();})
+    .catch(e=>{document.getElementById('ctx').innerHTML="<b>Could not load data.</b> Please try again shortly.";});
+}
+function init(){
+  const dates=DB.rows.map(r=>r.d).sort();
+  const min=dates[0], max=dates[dates.length-1];
+  document.getElementById('from').value=min;
+  document.getElementById('to').value=max;
+  document.getElementById('through').textContent="Data through "+(DB.updated||max||"");
+  run();
+}
+['from','to'].forEach(id=>{const el=document.getElementById(id); if(el) el.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();run();}});});
+document.getElementById('type').addEventListener('change',run);
+
+function chart(rows){
+  const W=920,H=320,mL=54,mR=16,mT=26,mB=44, pw=W-mL-mR, ph=H-mT-mB;
+  if(!rows.length) return '<div class="empty">No data in this range.</div>';
+  const buys=rows.map(r=>r.b), sells=rows.map(r=>r.s), n=rows.length;
+  let lo=Math.min(...buys,...sells), hi=Math.max(...buys,...sells);
+  if(hi-lo<0.01){ lo=Math.max(0,lo-1); hi=hi+1; }
+  const pad=(hi-lo)*0.15; lo=Math.max(0,lo-pad); hi=Math.min(100,hi+pad);
+  const x=i=> mL+(n===1? pw/2 : pw*i/(n-1));
+  const y=v=> mT+ph*(1-(v-lo)/(hi-lo));
+  let grid='';
+  for(let t=0;t<=4;t++){ const v=lo+(hi-lo)*t/4, yy=y(v);
+    grid+=`<line x1="${mL}" y1="${yy.toFixed(1)}" x2="${W-mR}" y2="${yy.toFixed(1)}" stroke="#e6edf5"/>`+
+          `<text x="${mL-8}" y="${(yy+4).toFixed(1)}" text-anchor="end" font-size="11" fill="#5b6b7f">${v.toFixed(2)}%</text>`; }
+  const step=Math.max(1,Math.ceil(n/8)); let xl='';
+  rows.forEach((r,i)=>{ if(i%step===0||i===n-1) xl+=`<text x="${x(i).toFixed(1)}" y="${H-mB+18}" text-anchor="middle" font-size="10" fill="#5b6b7f">${r.d.slice(5)}</text>`; });
+  const series=(vals,color)=>{
+    const line=n>1?`<polyline points="${vals.map((v,i)=>x(i).toFixed(1)+','+y(v).toFixed(1)).join(' ')}" fill="none" stroke="${color}" stroke-width="2.5"/>`:'';
+    const dots=vals.map((v,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="3.4" fill="${color}"/>`).join('');
+    return line+dots;
+  };
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" role="img">
+    ${grid}
+    <line x1="${mL}" y1="${mT}" x2="${mL}" y2="${H-mB}" stroke="#c9d6e5"/>
+    <line x1="${mL}" y1="${H-mB}" x2="${W-mR}" y2="${H-mB}" stroke="#c9d6e5"/>
+    ${xl}${series(buys,'#2E75B6')}${series(sells,'#E8833A')}
+    <g font-size="12">
+      <rect x="${mL}" y="4" width="12" height="12" fill="#2E75B6"/><text x="${mL+18}" y="14" fill="#1a2433">Buy %</text>
+      <rect x="${mL+80}" y="4" width="12" height="12" fill="#E8833A"/><text x="${mL+98}" y="14" fill="#1a2433">Sell %</text>
+    </g>
+  </svg>`;
+}
+function run(){
+  const from=document.getElementById('from').value, to=document.getElementById('to').value;
+  const sel=document.getElementById('type'); const key=sel.value, label=sel.selectedOptions[0].text;
+  const rows=DB.rows.filter(r=>r.d>=from && r.d<=to)
+    .map(r=>({d:r.d, b:r[key+'_b'], s:r[key+'_s']})).sort((a,b)=>a.d<b.d?-1:1);
+  document.getElementById('ctx').innerHTML=`Showing <b>${label}</b> from <b>${from}</b> to <b>${to}</b> — <b>${rows.length}</b> trading day(s).`;
+  document.getElementById('chart').innerHTML=chart(rows);
+  const tb=document.getElementById('tbody');
+  if(!rows.length){ tb.innerHTML='<tr><td colspan="4" class="empty">No data in this range.</td></tr>'; return; }
+  tb.innerHTML=[...rows].sort((a,b)=>a.d<b.d?1:-1).map(r=>{
+    const nt=r.b-r.s, nv=Math.abs(nt).toFixed(2)+'%';
+    const netTd = nt>0.0001?`<td class="net pos">${nv}</td>` : nt<-0.0001?`<td class="net neg">(${nv})</td>` : `<td class="net">${nv}</td>`;
+    return `<tr><td>${r.d}</td><td>${r.b.toFixed(2)}%</td><td>${r.s.toFixed(2)}%</td>${netTd}</tr>`;
+  }).join('');
+}
+if(sessionStorage.getItem('bt_auth')==='1'){ unlock(); }
+</script>
 </body></html>
