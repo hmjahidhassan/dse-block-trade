@@ -21,6 +21,8 @@ header a:hover{color:#fff;text-decoration:underline}
 .field input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(46,117,182,.15)}
 button.go{background:var(--blue);color:#fff;border:0;padding:10px 22px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;height:40px}
 button.go:hover{background:#255e93}
+button.btn-today{background:var(--navy);color:#fff;border:0;padding:10px 22px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;height:40px;margin-left:6px}
+button.btn-today:hover{background:#163959}
 .ctx{font-size:13px;color:var(--muted);margin:2px 0 12px}
 .ctx b{color:var(--ink)}
 .kpis{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
@@ -81,6 +83,7 @@ footer{font-size:12px;color:var(--muted);margin-top:18px;line-height:1.6}
     <div class="field"><label>To date</label><input type="date" id="to"></div>
     <div class="field"><label>Ticker</label><input list="tk" id="ticker" placeholder="e.g. IPDC" autocomplete="off"><datalist id="tk"></datalist></div>
     <button class="go" onclick="run()">Search</button>
+    <button class="btn-today" onclick="runToday()">Today</button>
   </div>
 </div>
 
@@ -94,7 +97,7 @@ footer{font-size:12px;color:var(--muted);margin-top:18px;line-height:1.6}
 <div class="panel">
   <h2 class="sec">Day-by-Day Block Trades</h2>
   <div class="tablewrap"><table><thead><tr>
-    <th>Date</th><th>Max Price</th><th>Min Price</th><th>Trades</th><th>Quantity (mn)</th><th>Value (BDT mn)</th><th>VWAP (BDT)</th>
+    <th>Date</th><th>Ticker</th><th>Max Price</th><th>Min Price</th><th>Trades</th><th>Quantity (mn)</th><th>Value (BDT mn)</th><th>VWAP (BDT)</th>
   </tr></thead><tbody id="tbody"></tbody></table></div>
 </div>
 
@@ -181,15 +184,28 @@ function init(){
   document.getElementById('through').textContent="Data through "+(DB.updated||max);
   run();
 }
+function runToday(){
+  const dates = DB.rows.map(r=>r.d).sort();
+  const max = DB.updated || dates[dates.length-1];
+  if(max){
+    document.getElementById('from').value = max;
+    document.getElementById('to').value = max;
+    document.getElementById('ticker').value = ""; // clear ticker to show all blocks of today
+  }
+  run();
+}
 function run(){
   const from=document.getElementById('from').value, to=document.getElementById('to').value;
   const tk=document.getElementById('ticker').value.trim().toUpperCase();
-  const rows=DB.rows.filter(r=>r.t===tk && r.d>=from && r.d<=to).sort((a,b)=>a.d<b.d?-1:1);
+  let rows=DB.rows.filter(r=>r.d>=from && r.d<=to);
+  if(tk){ rows=rows.filter(r=>r.t===tk); }
+  rows.sort((a,b)=>a.d<b.d?-1:(a.d>b.d?1:a.t.localeCompare(b.t)));
   const ctx=document.getElementById('ctx');
   const kb=document.getElementById('kpis'), tb=document.getElementById('tbody');
-  if(!tk){ctx.textContent="Enter a ticker to begin."; kb.innerHTML=""; tb.innerHTML=""; return;}
-  ctx.innerHTML=`Showing <b>${tk}</b> from <b>${from}</b> to <b>${to}</b> — <b>${rows.length}</b> trading day(s) found.`;
-  if(!rows.length){kb.innerHTML=""; tb.innerHTML=`<tr><td colspan="7" class="empty">No block trades for ${tk} in this range.</td></tr>`; return;}
+  
+  const label = tk ? `<b>${tk}</b>` : `<b>ALL TICKERS</b>`;
+  ctx.innerHTML=`Showing ${label} from <b>${from}</b> to <b>${to}</b> — <b>${rows.length}</b> block trade(s) found.`;
+  if(!rows.length){kb.innerHTML=""; tb.innerHTML=`<tr><td colspan="8" class="empty">No block trades found in this range.</td></tr>`; return;}
   const sTr=rows.reduce((s,r)=>s+r.tr,0), sQ=rows.reduce((s,r)=>s+r.q,0), sV=rows.reduce((s,r)=>s+r.v,0);
   const mx=Math.max(...rows.map(r=>r.mx)), mn=Math.min(...rows.map(r=>r.mn));
   const vwap=sV*1e6/sQ, qpt=sQ/sTr;
@@ -199,7 +215,7 @@ function run(){
     card("No. of Trades",fmt(sTr,0)),card("Quantity (mn)",fmt(sQ/1e6,3)),
     card("Qty / Trade",fmt(qpt,0)),card("Value (BDT mn)",fmt(sV,3)),card("VWAP (BDT)",fmt(vwap,2))
   ].join("");
-  tb.innerHTML=rows.map(r=>`<tr><td>${r.d}</td><td>${fmt(r.mx,2)}</td><td>${fmt(r.mn,2)}</td>`+
+  tb.innerHTML=rows.map(r=>`<tr><td>${r.d}</td><td><b>${r.t}</b></td><td>${fmt(r.mx,2)}</td><td>${fmt(r.mn,2)}</td>`+
     `<td>${fmt(r.tr,0)}</td><td>${fmt(r.q/1e6,3)}</td><td>${fmt(r.v,3)}</td><td>${fmt(r.v*1e6/r.q,2)}</td></tr>`).join("");
 }
 
