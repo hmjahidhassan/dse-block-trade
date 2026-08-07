@@ -78,14 +78,15 @@ footer{font-size:12px;color:var(--muted);margin-top:18px;line-height:1.6}
   <div class="filters">
     <div class="field"><label>From date</label><input type="date" id="from"></div>
     <div class="field"><label>To date</label><input type="date" id="to"></div>
-    <div class="field"><label>Client type</label>
-      <select id="type">
-        <option value="retail">Retail</option>
-        <option value="inst">Institution</option>
-        <option value="dealer">Dealer</option>
-        <option value="foreign">Foreign</option>
-        <option value="others">Others</option>
-      </select>
+    <div class="field" style="flex: 1; min-width: 320px;">
+      <label>Categories (Select Multiple)</label>
+      <div class="cat-checkboxes" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 6px;">
+        <label style="font-size: 13px; font-weight: 700; cursor: pointer; color: #2E75B6;"><input type="checkbox" class="cat-chk" value="retail" checked onchange="run()"> Retail</label>
+        <label style="font-size: 13px; font-weight: 700; cursor: pointer; color: #E8833A;"><input type="checkbox" class="cat-chk" value="inst" checked onchange="run()"> Institution</label>
+        <label style="font-size: 13px; font-weight: 700; cursor: pointer; color: #8e44ad;"><input type="checkbox" class="cat-chk" value="dealer" onchange="run()"> Dealer</label>
+        <label style="font-size: 13px; font-weight: 700; cursor: pointer; color: #e74c3c;"><input type="checkbox" class="cat-chk" value="foreign" checked onchange="run()"> Foreign</label>
+        <label style="font-size: 13px; font-weight: 700; cursor: pointer; color: #16a085;"><input type="checkbox" class="cat-chk" value="others" onchange="run()"> Others</label>
+      </div>
     </div>
     <button class="go" onclick="run()">Search</button>
   </div>
@@ -110,9 +111,7 @@ footer{font-size:12px;color:var(--muted);margin-top:18px;line-height:1.6}
 
 <div class="panel">
   <h2 class="sec">Day-by-Day</h2>
-  <div class="tablewrap"><table><thead><tr>
-    <th>Date</th><th>Buy %</th><th>Sell %</th><th>Net</th>
-  </tr></thead><tbody id="tbody"></tbody></table></div>
+  <div class="tablewrap"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
 </div>
 
 <footer>
@@ -186,13 +185,29 @@ function init(){
   run();
 }
 ['from','to'].forEach(id=>{const el=document.getElementById(id); if(el) el.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();run();}});});
-document.getElementById('type').addEventListener('change',run);
 
-function chart(rows){
-  const W=920,H=320,mL=64,mR=16,mT=30,mB=44, pw=W-mL-mR, ph=H-mT-mB;
-  if(!rows.length) return '<div class="empty">No data in this range.</div>';
-  const nets = rows.map(r=> r.b - r.s), n = rows.length;
-  let lo = Math.min(0, ...nets), hi = Math.max(0, ...nets);
+const CAT_CONFIG = {
+  retail: { label: 'Retail', color: '#2E75B6' },
+  inst:   { label: 'Institution', color: '#E8833A' },
+  dealer: { label: 'Dealer', color: '#8e44ad' },
+  foreign:{ label: 'Foreign', color: '#e74c3c' },
+  others: { label: 'Others', color: '#16a085' }
+};
+
+function chart(rows, selectedCats){
+  const W=920, H=340, mL=64, mR=16, mT=36, mB=44, pw=W-mL-mR, ph=H-mT-mB;
+  if(!rows.length || !selectedCats.length) return '<div class="empty">Please select at least one category.</div>';
+  const n = rows.length;
+  
+  const catData = selectedCats.map(catKey => {
+    const cfg = CAT_CONFIG[catKey];
+    const nets = rows.map(r => (r[catKey + '_b'] || 0) - (r[catKey + '_s'] || 0));
+    return { key: catKey, label: cfg.label, color: cfg.color, nets: nets };
+  });
+
+  let allNets = [];
+  catData.forEach(cd => allNets.push(...cd.nets));
+  let lo = Math.min(0, ...allNets), hi = Math.max(0, ...allNets);
   if(Math.abs(hi - lo) < 0.1){ lo -= 1; hi += 1; }
   const range = hi - lo;
   const pad = range * 0.15;
@@ -221,85 +236,33 @@ function chart(rows){
     }
   });
 
-  const line = n > 1 ? `<polyline points="${nets.map((v, i) => x(i).toFixed(1) + ',' + y(v).toFixed(1)).join(' ')}" fill="none" stroke="#2E75B6" stroke-width="2.5"/>` : '';
-  const dots = nets.map((v, i) => {
-    const color = v >= 0 ? '#10b981' : '#ef4444';
-    const label = (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
-    return `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="4.5" fill="${color}" stroke="#fff" stroke-width="1.5"><title>${rows[i].d}: ${label}</title></circle>`;
-  }).join('');
+  let seriesHtml = '';
+  catData.forEach(cd => {
+    const line = n > 1 ? `<polyline points="${cd.nets.map((v, i) => x(i).toFixed(1) + ',' + y(v).toFixed(1)).join(' ')}" fill="none" stroke="${cd.color}" stroke-width="2.5"/>` : '';
+    const dots = cd.nets.map((v, i) => {
+      const label = (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
+      return `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="4" fill="${cd.color}" stroke="#fff" stroke-width="1.5"><title>${rows[i].d} - ${cd.label}: ${label}</title></circle>`;
+    }).join('');
+    seriesHtml += line + dots;
+  });
+
+  let legendHtml = '';
+  let legX = mL;
+  catData.forEach(cd => {
+    legendHtml += `<rect x="${legX}" y="6" width="12" height="12" rx="3" fill="${cd.color}"/>` +
+                  `<text x="${legX + 16}" y="16" fill="#1a2433" font-weight="600">${cd.label}</text>`;
+    legX += cd.label.length * 8 + 44;
+  });
 
   return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" role="img">
     ${grid}
     ${zeroLine}
     <line x1="${mL}" y1="${mT}" x2="${mL}" y2="${H-mB}" stroke="#c9d6e5"/>
     <line x1="${mL}" y1="${H-mB}" x2="${W-mR}" y2="${H-mB}" stroke="#c9d6e5"/>
-    ${xl}${line}${dots}
+    ${xl}
+    ${seriesHtml}
     <g font-size="12">
-      <circle cx="${mL}" cy="12" r="5" fill="#10b981"/><text x="${mL+12}" y="16" fill="#1a2433" font-weight="600">Net Buyer (+)</text>
-      <circle cx="${mL+110}" cy="12" r="5" fill="#ef4444"/><text x="${mL+122}" y="16" fill="#1a2433" font-weight="600">Net Seller (-)</text>
-    </g>
-  </svg>`;
-}
-function catChart(rows){
-  const W=920, H=240, mL=100, mR=80, mT=30, mB=30, pw=W-mL-mR, ph=H-mT-mB;
-  if(!rows.length) return '<div class="empty">No data in this range.</div>';
-  const n = rows.length;
-  const cats = [
-    { key: 'retail', label: 'Retail' },
-    { key: 'inst', label: 'Institution' },
-    { key: 'dealer', label: 'Dealer' },
-    { key: 'foreign', label: 'Foreign' },
-    { key: 'others', label: 'Others' }
-  ];
-
-  const data = cats.map(c => {
-    const avgB = rows.reduce((s, r) => s + (r[c.key + '_b'] || 0), 0) / n;
-    const avgS = rows.reduce((s, r) => s + (r[c.key + '_s'] || 0), 0) / n;
-    return { label: c.label, net: avgB - avgS };
-  });
-
-  const nets = data.map(d => d.net);
-  let maxAbs = Math.max(...nets.map(v => Math.abs(v)), 0.5);
-  maxAbs = Math.ceil(maxAbs * 1.25 * 10) / 10;
-
-  const xZero = mL + pw / 2;
-  const x = v => xZero + (v / maxAbs) * (pw / 2);
-  const rowH = ph / cats.length;
-
-  let grid = '';
-  const ticks = [-maxAbs, -maxAbs/2, 0, maxAbs/2, maxAbs];
-  ticks.forEach(t => {
-    const xx = x(t);
-    const label = (t > 0 ? '+' : '') + t.toFixed(2) + '%';
-    const isZero = Math.abs(t) < 0.001;
-    grid += `<line x1="${xx.toFixed(1)}" y1="${mT}" x2="${xx.toFixed(1)}" y2="${H-mB}" stroke="${isZero ? '#94a3b8' : '#e6edf5'}" stroke-width="${isZero ? 1.5 : 1}" ${isZero ? 'stroke-dasharray="4,4"' : ''}/>` +
-            `<text x="${xx.toFixed(1)}" y="${H-mB+16}" text-anchor="middle" font-size="10" fill="${isZero ? '#1a2433' : '#5b6b7f'}" font-weight="${isZero ? '700' : '400'}">${label}</text>`;
-  });
-
-  let bars = '';
-  data.forEach((d, i) => {
-    const yCenter = mT + i * rowH + rowH / 2;
-    const barH = 20;
-    const yTop = yCenter - barH / 2;
-    const xVal = x(d.net);
-    const color = d.net >= 0 ? '#10b981' : '#ef4444';
-    const barX = Math.min(xZero, xVal);
-    const barW = Math.abs(xVal - xZero);
-    const labelText = (d.net >= 0 ? '+' : '') + d.net.toFixed(2) + '%';
-    const textAnchor = d.net >= 0 ? 'start' : 'end';
-    const textX = d.net >= 0 ? xVal + 6 : xVal - 6;
-
-    bars += `<text x="${mL-12}" y="${yCenter+4}" text-anchor="end" font-size="12" font-weight="600" fill="#1a2433">${d.label}</text>`;
-    bars += `<rect x="${barX.toFixed(1)}" y="${yTop.toFixed(1)}" width="${Math.max(2, barW).toFixed(1)}" height="${barH}" fill="${color}" rx="4"/>`;
-    bars += `<text x="${textX.toFixed(1)}" y="${yCenter+4}" text-anchor="${textAnchor}" font-size="11" font-weight="700" fill="${color}">${labelText}</text>`;
-  });
-
-  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" role="img">
-    ${grid}
-    ${bars}
-    <g font-size="12">
-      <circle cx="${mL}" cy="12" r="5" fill="#10b981"/><text x="${mL+12}" y="16" fill="#1a2433" font-weight="600">Net Buyer (+)</text>
-      <circle cx="${mL+110}" cy="12" r="5" fill="#ef4444"/><text x="${mL+122}" y="16" fill="#1a2433" font-weight="600">Net Seller (-)</text>
+      ${legendHtml}
     </g>
   </svg>`;
 }
@@ -367,27 +330,109 @@ function lastDayChart(row){
   </svg>`;
 }
 
+function catChart(rows){
+  const W=920, H=240, mL=100, mR=80, mT=30, mB=30, pw=W-mL-mR, ph=H-mT-mB;
+  if(!rows.length) return '<div class="empty">No data in this range.</div>';
+  const n = rows.length;
+  const cats = [
+    { key: 'retail', label: 'Retail' },
+    { key: 'inst', label: 'Institution' },
+    { key: 'dealer', label: 'Dealer' },
+    { key: 'foreign', label: 'Foreign' },
+    { key: 'others', label: 'Others' }
+  ];
+
+  const data = cats.map(c => {
+    const avgB = rows.reduce((s, r) => s + (r[c.key + '_b'] || 0), 0) / n;
+    const avgS = rows.reduce((s, r) => s + (r[c.key + '_s'] || 0), 0) / n;
+    return { label: c.label, net: avgB - avgS };
+  });
+
+  const nets = data.map(d => d.net);
+  let maxAbs = Math.max(...nets.map(v => Math.abs(v)), 0.5);
+  maxAbs = Math.ceil(maxAbs * 1.25 * 10) / 10;
+
+  const xZero = mL + pw / 2;
+  const x = v => xZero + (v / maxAbs) * (pw / 2);
+  const rowH = ph / cats.length;
+
+  let grid = '';
+  const ticks = [-maxAbs, -maxAbs/2, 0, maxAbs/2, maxAbs];
+  ticks.forEach(t => {
+    const xx = x(t);
+    const label = (t > 0 ? '+' : '') + t.toFixed(2) + '%';
+    const isZero = Math.abs(t) < 0.001;
+    grid += `<line x1="${xx.toFixed(1)}" y1="${mT}" x2="${xx.toFixed(1)}" y2="${H-mB}" stroke="${isZero ? '#94a3b8' : '#e6edf5'}" stroke-width="${isZero ? 1.5 : 1}" ${isZero ? 'stroke-dasharray="4,4"' : ''}/>` +
+            `<text x="${xx.toFixed(1)}" y="${H-mB+16}" text-anchor="middle" font-size="10" fill="${isZero ? '#1a2433' : '#5b6b7f'}" font-weight="${isZero ? '700' : '400'}">${label}</text>`;
+  });
+
+  let bars = '';
+  data.forEach((d, i) => {
+    const yCenter = mT + i * rowH + rowH / 2;
+    const barH = 20;
+    const yTop = yCenter - barH / 2;
+    const xVal = x(d.net);
+    const color = d.net >= 0 ? '#10b981' : '#ef4444';
+    const barX = Math.min(xZero, xVal);
+    const barW = Math.abs(xVal - xZero);
+    const labelText = (d.net >= 0 ? '+' : '') + d.net.toFixed(2) + '%';
+    const textAnchor = d.net >= 0 ? 'start' : 'end';
+    const textX = d.net >= 0 ? xVal + 6 : xVal - 6;
+
+    bars += `<text x="${mL-12}" y="${yCenter+4}" text-anchor="end" font-size="12" font-weight="600" fill="#1a2433">${d.label}</text>`;
+    bars += `<rect x="${barX.toFixed(1)}" y="${yTop.toFixed(1)}" width="${Math.max(2, barW).toFixed(1)}" height="${barH}" fill="${color}" rx="4"/>`;
+    bars += `<text x="${textX.toFixed(1)}" y="${yCenter+4}" text-anchor="${textAnchor}" font-size="11" font-weight="700" fill="${color}">${labelText}</text>`;
+  });
+
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" role="img">
+    ${grid}
+    ${bars}
+    <g font-size="12">
+      <circle cx="${mL}" cy="12" r="5" fill="#10b981"/><text x="${mL+12}" y="16" fill="#1a2433" font-weight="600">Net Buyer (+)</text>
+      <circle cx="${mL+110}" cy="12" r="5" fill="#ef4444"/><text x="${mL+122}" y="16" fill="#1a2433" font-weight="600">Net Seller (-)</text>
+    </g>
+  </svg>`;
+}
+
 function run(){
   const from=document.getElementById('from').value, to=document.getElementById('to').value;
-  const sel=document.getElementById('type'); const key=sel.value, label=sel.selectedOptions[0].text;
-  const rangeRows = DB.rows.filter(r=>r.d>=from && r.d<=to);
-  const rows=rangeRows.map(r=>({d:r.d, b:r[key+'_b'], s:r[key+'_s']})).sort((a,b)=>a.d<b.d?-1:1);
+  const selectedCats = Array.from(document.querySelectorAll('.cat-chk:checked')).map(el => el.value);
+  const rangeRows = DB.rows.filter(r=>r.d>=from && r.d<=to).sort((a,b)=>a.d<b.d?-1:1);
   
-  const lastRow = rangeRows.length ? rangeRows.sort((a,b)=>a.d<b.d?-1:1)[rangeRows.length - 1] : null;
+  const lastRow = rangeRows.length ? rangeRows[rangeRows.length - 1] : null;
   const lastDateLabel = lastRow ? ` (${lastRow.d})` : '';
-  
-  document.getElementById('ctx').innerHTML=`Showing <b>${label}</b> from <b>${from}</b> to <b>${to}</b> — <b>${rows.length}</b> trading day(s).`;
+  const catNames = selectedCats.map(c => CAT_CONFIG[c] ? CAT_CONFIG[c].label : c).join(', ');
+
+  document.getElementById('ctx').innerHTML=`Showing <b>${catNames || 'No Categories Selected'}</b> from <b>${from}</b> to <b>${to}</b> — <b>${rangeRows.length}</b> trading day(s).`;
   document.getElementById('lastDaySec').innerHTML=`Latest Session Net Position${lastDateLabel}`;
   document.getElementById('lastDayChart').innerHTML=lastDayChart(lastRow);
-  document.getElementById('chart').innerHTML=chart(rows);
+  document.getElementById('chart').innerHTML=chart(rangeRows, selectedCats);
   document.getElementById('catChart').innerHTML=catChart(rangeRows);
 
+  const th=document.getElementById('thead');
   const tb=document.getElementById('tbody');
-  if(!rows.length){ tb.innerHTML='<tr><td colspan="4" class="empty">No data in this range.</td></tr>'; return; }
-  tb.innerHTML=[...rows].sort((a,b)=>a.d<b.d?1:-1).map(r=>{
-    const nt=r.b-r.s, nv=Math.abs(nt).toFixed(2)+'%';
-    const netTd = nt>0.0001?`<td class="net pos">${nv}</td>` : nt<-0.0001?`<td class="net neg">(${nv})</td>` : `<td class="net">${nv}</td>`;
-    return `<tr><td>${r.d}</td><td>${r.b.toFixed(2)}%</td><td>${r.s.toFixed(2)}%</td>${netTd}</tr>`;
+  if(!rangeRows.length || !selectedCats.length){
+    th.innerHTML='<tr><th>Date</th></tr>';
+    tb.innerHTML='<tr><td class="empty">No data or categories selected.</td></tr>';
+    return;
+  }
+
+  let thCols = '<th>Date</th>';
+  selectedCats.forEach(c => {
+    const cfg = CAT_CONFIG[c];
+    thCols += `<th style="color: ${cfg.color}">${cfg.label} Net</th>`;
+  });
+  th.innerHTML = `<tr>${thCols}</tr>`;
+
+  tb.innerHTML = [...rangeRows].sort((a,b)=>a.d<b.d?-1:1).map(r=>{
+    let tds = `<td>${r.d}</td>`;
+    selectedCats.forEach(c => {
+      const nt = (r[c + '_b'] || 0) - (r[c + '_s'] || 0);
+      const nv = (nt >= 0 ? '+' : '') + nt.toFixed(2) + '%';
+      const color = nt >= 0 ? '#10b981' : '#ef4444';
+      tds += `<td style="color:${color}; font-weight:700;">${nv}</td>`;
+    });
+    return `<tr>${tds}</tr>`;
   }).join('');
 }
 if(sessionStorage.getItem('bt_auth')==='1'){ unlock(); }
